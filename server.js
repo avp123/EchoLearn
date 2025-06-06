@@ -2,6 +2,7 @@
 require('dotenv').config();
 const express = require('express');
 const fetch = require('node-fetch');
+const cors = require('cors');
 const path = require('path');
 
 const app = express();
@@ -17,8 +18,15 @@ if (!ELEVENLABS_API_KEY) {
 // Base URL for the Convai endpoints
 const API_BASE_URL = "https://api.elevenlabs.io/v1/convai";
 
-// Serve static files from /public
-app.use(express.static(path.join(__dirname, 'public')));
+// Enable CORS so that GitHub Pages (or any frontend) can fetch from this server
+// You can restrict the origin to your GitHub Pages domain if you want:
+//   origin: "https://<your-github-username>.github.io"
+app.use(cors({
+  origin: "*" // ← for simplicity, allow all origins; change to your GH Pages URL if you prefer
+}));
+
+// Serve static files from /docs (only if you ever want to test those locally):
+app.use(express.static(path.join(__dirname, 'docs')));
 
 // ——————————————————————————————
 // 1. LIST ALL CONVERSATIONS
@@ -40,7 +48,7 @@ app.get('/api/conversations', async (req, res) => {
     }
 
     const data = await response.json();
-    // ElevenLabs returns { "conversations": [ … ], "has_more": false, "next_cursor": null }
+    // ElevenLabs returns: { "conversations": [ … ], "has_more": false, "next_cursor": null }
     return res.json(data.conversations || []);
   } catch (err) {
     console.error("Server error (list):", err);
@@ -73,9 +81,9 @@ app.get('/api/conversations/:id', async (req, res) => {
     //   "body": {
     //     "agent_id": "...",
     //     "conversation_id": "...",
-    //     "status": "...",
-    //     "transcript": [ { role, message, time_in_call_secs }, … ]
-    //     ...
+    //     "status": "done",
+    //     "transcript": [ { role, message, time_in_call_secs }, … ],
+    //     …
     //   }
     // }
     const data = await response.json();
@@ -92,5 +100,5 @@ app.get('/api/conversations/:id', async (req, res) => {
 // ——————————————————————————————
 app.listen(PORT, () => {
   console.log(`✅ Server listening on port ${PORT}`);
-  console.log(`👉 Open http://localhost:${PORT} in your browser`);
+  console.log(`👉 Open http://localhost:${PORT} in your browser (for testing)`);
 });

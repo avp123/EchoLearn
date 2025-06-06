@@ -61,10 +61,10 @@
   <h1>📚 Past Conversations</h1>
   <p>Click any conversation to see the full transcript.</p>
 
-  <!-- This UL will hold the list of conversations -->
+  <!-- List of conversations will be injected here -->
   <ul id="convoList" class="conversation-list"></ul>
 
-  <!-- This DIV shows the transcript for one conversation -->
+  <!-- Container for one transcript (hidden until a convo is clicked) -->
   <div id="transcriptSection" class="transcript-container" style="display: none;">
     <a id="backToList" class="back-button">← Back to All Conversations</a>
     <h2>Conversation Transcript</h2>
@@ -73,6 +73,9 @@
 
   <script>
     (function() {
+      // Change this to your actual Render domain:
+      const BACKEND_BASE_URL = "https://echolearn-3uy9.onrender.com";
+
       // Helper to format a Unix timestamp (in seconds) into a readable date
       function formatUnixSecs(unixSecs) {
         const date = new Date(unixSecs * 1000);
@@ -85,7 +88,7 @@
         });
       }
 
-      // Show an error message in the conversation list area
+      // Show an error message if something goes wrong
       function showError(msg) {
         const listEl = document.getElementById("convoList");
         listEl.innerHTML = `<li style="color: red;">${msg}</li>`;
@@ -99,8 +102,7 @@
         listEl.innerHTML = "<li>Loading conversations…</li>";
 
         try {
-          const resp = await fetch("https://my-render-app.onrender.com/api/conversations")
-          ;
+          const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations`);
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
           }
@@ -116,6 +118,7 @@
           convos.forEach((conv) => {
             const li = document.createElement("li");
             li.className = "conversation-item";
+            // ElevenLabs’ list endpoint uses "conversation_id" in the response
             li.dataset.convoId = conv.conversation_id;
 
             // Extract and format the start time (in Unix seconds)
@@ -126,13 +129,13 @@
               <div class="conv-meta">🗓 ${dateStr}</div>
               <div><strong>Conversation ID:</strong> ${li.dataset.convoId}</div>
             `;
-            // When clicked, load transcript for that ID
+            // When clicked, load the transcript
             li.addEventListener("click", () => showTranscript(li.dataset.convoId));
             listEl.appendChild(li);
           });
         } catch (err) {
           console.error(err);
-          showError("Failed to fetch conversation list. See console.");
+          showError("Failed to fetch conversation list. Check console for details.");
         }
       }
 
@@ -149,7 +152,7 @@
         contentDiv.innerHTML = "<p>Loading transcript…</p>";
 
         try {
-          const resp = await fetch(`/api/conversations/${convoId}`);
+          const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations/${convoId}`);
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
           }
