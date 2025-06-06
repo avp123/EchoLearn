@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Conversation History</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background-color: #fafafa;
+      color: #333;
+    }
+    h1 {
+      margin-bottom: 1rem;
+    }
+    .conversation-list {
+      list-style: none;
+      padding: 0;
+    }
+    .conversation-item {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .conversation-item:hover {
+      background: #f0f0f0;
+    }
+    .conv-meta {
+      font-size: 0.9rem;
+      color: #666;
+    }
+    .transcript-container {
+      margin-top: 2rem;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .message {
+      margin: 0.75rem 0;
+    }
+    .message .role {
+      font-weight: bold;
+    }
+    .back-button {
+      display: inline-block;
+      margin-bottom: 1rem;
+      color: #007bff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📚 Past Conversations</h1>
+  <p>Click any conversation to see the full transcript.</p>
+
+  <!-- This UL will hold the list of conversations -->
+  <ul id="convoList" class="conversation-list"></ul>
+
+  <!-- This DIV shows the transcript for one conversation -->
+  <div id="transcriptSection" class="transcript-container" style="display: none;">
+    <a id="backToList" class="back-button">← Back to All Conversations</a>
+    <h2>Conversation Transcript</h2>
+    <div id="transcriptContent"></div>
+  </div>
+
+  <script>
+    (function() {
+      // Helper to format a Unix timestamp (in seconds) into a readable date
+      function formatUnixSecs(unixSecs) {
+        const date = new Date(unixSecs * 1000);
+        return date.toLocaleString("en-US", {
+          year: "numeric",
+          month: "short",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      // Show an error message in the conversation list area
+      function showError(msg) {
+        const listEl = document.getElementById("convoList");
+        listEl.innerHTML = `<li style="color: red;">${msg}</li>`;
+      }
+
+      // ———————————————————————
+      // 1. FETCH & DISPLAY ALL CONVERSATIONS
+      // ———————————————————————
+      async function loadConversationList() {
+        const listEl = document.getElementById("convoList");
+        listEl.innerHTML = "<li>Loading conversations…</li>";
+
+        try {
+          const resp = await fetch("/api/conversations");
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`);
+          }
+          const convos = await resp.json();
+
+          // If no conversations returned:
+          if (!Array.isArray(convos) || convos.length === 0) {
+            listEl.innerHTML = "<li>No conversations found.</li>";
+            return;
+          }
+
+          listEl.innerHTML = "";
+          convos.forEach((conv) => {
+            const li = document.createElement("li");
+            li.className = "conversation-item";
+            // ElevenLabs uses "conversation_id" in the list response
+            li.dataset.convoId = conv.conversation_id;
+
+            // Extract and format the start time (in Unix seconds)
+            const timestampSecs = conv.start_time_unix_secs;
+            const dateStr = formatUnixSecs(timestampSecs);
+
+            li.innerHTML = `
+              <div class="conv-meta">🗓 ${dateStr}</div>
+              <div><strong>Conversation ID:</strong> ${li.dataset.convoId}</div>
+            `;
+            // When clicked, load transcript for that ID
+            li.addEventListener("click", () => showTranscript(li.dataset.convoId));
+            listEl.appendChild(li);
+          });
+        } catch (err) {
+          console.error(err);
+          showError("Failed to fetch conversation list. See console.");
+        }
+      }
+
+      // ——————————————————————————————————–
+      // 2. FETCH & DISPLAY ONE CONVERSATION’S TRANSCRIPT
+      // ——————————————————————————————————–
+      async function showTranscript(convoId) {
+        // Hide the list, show transcript container
+        document.getElementById("convoList").style.display = "none";
+        const transcriptSection = document.getElementById("transcriptSection");
+        transcriptSection.style.display = "block";
+
+        const contentDiv = document.getElementById("transcriptContent");
+        contentDiv.innerHTML = "<p>Loading transcript…</p>";
+
+        try {
+          const resp = await fetch(`/api/conversations/${convoId}`);
+          if (!resp.ok) {
+            throw new Error(`HTTP ${resp.status}`);
+          }
+          const transcript = await resp.json();
+          // transcript is an array of objects: { role: "user"|"assistant", message: "...", time_in_call_secs: 10 }
+
+          if (!Array.isArray(transcript) || transcript.length === 0) {
+            contentDiv.innerHTML = "<p>No transcript available.</p>";
+            return;
+          }
+
+          contentDiv.innerHTML = "";
+          transcript.forEach((msgObj) => {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = "message";
+            msgDiv.innerHTML = `
+              <div class="role">${msgObj.role === "user" ? "You:" : "Assistant:"}</div>
+              <div class="text">${msgObj.message}</div>
+            `;
+            contentDiv.appendChild(msgDiv);
+          });
+        } catch (err) {
+          console.error(err);
+          contentDiv.innerHTML = "<p style='color:red;'>Failed to load transcript.</p>";
+        }
+      }
+
+      // ——————————————————————
+      // 3. “Back to All Conversations” Button
+      // ——————————————————————
+      document.getElementById("backToList").addEventListener("click", () => {
+        document.getElementById("transcriptSection").style.display = "none";
+        document.getElementById("convoList").style.display = "block";
+      });
+
+      // ——————————————————————
+      // Initialize on Page Load
+      // ——————————————————————
+      window.addEventListener("DOMContentLoaded", loadConversationList);
+    })();
+  </script>
+</body>
+</html>

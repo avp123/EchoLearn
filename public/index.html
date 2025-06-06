@@ -11,13 +11,19 @@
       padding: 50px;
       background-color: #f4f4f4;
     }
-
     h1 {
       color: #333;
     }
-
     .agent-container {
       margin-top: 40px;
+    }
+    .view-history {
+      margin-top: 2rem;
+    }
+    .view-history a {
+      text-decoration: none;
+      color: #007bff;
+      font-size: 1rem;
     }
   </style>
 </head>
@@ -27,10 +33,15 @@
   <p>Talk to the educational AI assistant below!</p>
 
   <div class="agent-container">
+    <!-- Your Convai widget; the agent-id stays here -->
     <elevenlabs-convai agent-id="agent_01jw5b0p72fqnas385dadb1b9q"></elevenlabs-convai>
   </div>
 
-  <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+  <div class="view-history">
+    <a href="history.html">📚 View Past Conversations</a>
+  </div>
 
+  <!-- Load the ElevenLabs Convai widget script -->
+  <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
 </body>
 </html>
