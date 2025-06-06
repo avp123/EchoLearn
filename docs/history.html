@@ -159,8 +159,9 @@
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
           }
-          const transcript = await resp.json();
-          // transcript is an array of objects: { role: "user"|"assistant", message: "...", time_in_call_secs: 10 }
+          const data = await resp.json();
+
+          const transcript = data.body?.transcript;
 
           if (!Array.isArray(transcript) || transcript.length === 0) {
             contentDiv.innerHTML = "<p>No transcript available.</p>";
@@ -182,6 +183,7 @@
           contentDiv.innerHTML = "<p style='color:red;'>Failed to load transcript.</p>";
         }
       }
+
 
       // ——————————————————————
       // 3. “Back to All Conversations” Button
