@@ -76,18 +76,11 @@ app.get('/api/conversations/:id', async (req, res) => {
       return res.status(response.status).json({ error: msg });
     }
 
-    // ElevenLabs returns:
-    // {
-    //   "body": {
-    //     "agent_id": "...",
-    //     "conversation_id": "...",
-    //     "status": "done",
-    //     "transcript": [ { role, message, time_in_call_secs }, … ],
-    //     …
-    //   }
-    // }
     const data = await response.json();
-    const transcript = data.body?.transcript || [];
+    // The ElevenLabs API returns the transcript directly in the response
+    // No need to access data.body.transcript
+    console.log("ElevenLabs transcript response:", data); // Add logging to debug
+    const transcript = data.transcript || [];
     return res.json(transcript);
   } catch (err) {
     console.error("Server error (get):", err);
