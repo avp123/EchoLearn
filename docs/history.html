@@ -11,6 +11,34 @@
       background-color: #fafafa;
       color: #333;
     }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logout-btn {
+      padding: 8px 16px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .logout-btn:hover {
+      background: #c82333;
+    }
     h1 {
       margin-bottom: 1rem;
     }
@@ -57,10 +85,18 @@
   </style>
 </head>
 <body>
-
-  <div style="margin-bottom: 1rem;">
-    <a href="index.html" class="back-button">← Back to Home</a>
+  <div class="header">
+    <div>
+      <a href="index.html" class="back-button">← Back to Home</a>
+    </div>
+    <div class="user-menu">
+      <div class="user-info">
+        <span id="userName">Loading...</span>
+      </div>
+      <a href="/auth/logout" class="logout-btn">Logout</a>
+    </div>
   </div>
+
   <h1>📚 Past Conversations</h1>
   <p>Click any conversation to see the full transcript.</p>
 
@@ -76,8 +112,27 @@
 
   <script>
     (function() {
-      // Change this to your actual Render domain:
       const BACKEND_BASE_URL = "https://echolearn-3uy9.onrender.com";
+
+      // Check authentication status
+      async function checkAuth() {
+        try {
+          const response = await fetch(`${BACKEND_BASE_URL}/auth/user`, {
+            credentials: 'include'
+          });
+          if (!response.ok) {
+            throw new Error('Not authenticated');
+          }
+          const user = await response.json();
+          if (!user) {
+            window.location.href = '/login.html';
+            return;
+          }
+          document.getElementById('userName').textContent = `👤 ${user.name}`;
+        } catch (err) {
+          window.location.href = '/login.html';
+        }
+      }
 
       // Helper to format a Unix timestamp (in seconds) into a readable date
       function formatUnixSecs(unixSecs) {
@@ -97,21 +152,20 @@
         listEl.innerHTML = `<li style="color: red;">${msg}</li>`;
       }
 
-      // ———————————————————————
-      // 1. FETCH & DISPLAY ALL CONVERSATIONS
-      // ———————————————————————
+      // Fetch conversations with credentials
       async function loadConversationList() {
         const listEl = document.getElementById("convoList");
         listEl.innerHTML = "<li>Loading conversations…</li>";
 
         try {
-          const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations`);
+          const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations`, {
+            credentials: 'include'
+          });
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
           }
           const convos = await resp.json();
 
-          // If no conversations returned:
           if (!Array.isArray(convos) || convos.length === 0) {
             listEl.innerHTML = "<li>No conversations found.</li>";
             return;
@@ -121,10 +175,8 @@
           convos.forEach((conv) => {
             const li = document.createElement("li");
             li.className = "conversation-item";
-            // ElevenLabs' list endpoint uses "conversation_id" in the response
             li.dataset.convoId = conv.conversation_id;
 
-            // Extract and format the start time (in Unix seconds)
             const timestampSecs = conv.start_time_unix_secs;
             const dateStr = formatUnixSecs(timestampSecs);
 
@@ -132,7 +184,6 @@
               <div class="conv-meta">🗓 ${dateStr}</div>
               <div><strong>Conversation ID:</strong> ${li.dataset.convoId}</div>
             `;
-            // When clicked, load the transcript
             li.addEventListener("click", () => showTranscript(li.dataset.convoId));
             listEl.appendChild(li);
           });
@@ -142,11 +193,7 @@
         }
       }
 
-      // ——————————————————————————————————–
-      // 2. FETCH & DISPLAY ONE CONVERSATION'S TRANSCRIPT
-      // ——————————————————————————————————–
       async function showTranscript(convoId) {
-        // Hide the list, show transcript container
         document.getElementById("convoList").style.display = "none";
         const transcriptSection = document.getElementById("transcriptSection");
         transcriptSection.style.display = "block";
@@ -155,7 +202,9 @@
         contentDiv.innerHTML = "<p>Loading transcript…</p>";
 
         try {
-          const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations/${convoId}`);
+          const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations/${convoId}`, {
+            credentials: 'include'
+          });
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
           }
@@ -184,19 +233,16 @@
         }
       }
 
-
-      // ——————————————————————
-      // 3. "Back to All Conversations" Button
-      // ——————————————————————
       document.getElementById("backToList").addEventListener("click", () => {
         document.getElementById("transcriptSection").style.display = "none";
         document.getElementById("convoList").style.display = "block";
       });
 
-      // ——————————————————————
-      // Initialize on Page Load
-      // ——————————————————————
-      window.addEventListener("DOMContentLoaded", loadConversationList);
+      // Initialize
+      window.addEventListener("DOMContentLoaded", () => {
+        checkAuth();
+        loadConversationList();
+      });
     })();
   </script>
 </body>
