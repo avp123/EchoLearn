@@ -95,7 +95,7 @@
   <div id="loginPrompt" class="login-prompt">
     <h2>Sign in to Start Learning</h2>
     <p>Please sign in with your Google account to use EchoLearn</p>
-    <a href="/auth/google" class="google-btn">
+    <a href="/auth/google" class="google-btn" onclick="handleLogin(event)">
       <img src="https://www.google.com/favicon.ico" alt="Google" width="20" height="20">
       Sign in with Google
     </a>
@@ -157,6 +157,18 @@
       if (widget) {
         widget.setAttribute('user-id', user.googleId);
         widget.setAttribute('user-name', user.name);
+      }
+    }
+
+    // Add this new function
+    async function handleLogin(event) {
+      event.preventDefault();
+      try {
+        console.log('Attempting to login...');
+        window.location.href = BACKEND_BASE_URL + '/auth/google';
+      } catch (err) {
+        console.error('Login error:', err);
+        alert('Error during login. Please check console for details.');
       }
     }
 
