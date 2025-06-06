@@ -109,7 +109,7 @@ app.get('/auth/google',
 
 app.get('/auth/google/callback',
   passport.authenticate('google', {
-    successRedirect: '/',
+    successRedirect: process.env.CLIENT_URL || 'http://localhost:3000',
     failureRedirect: '/login'
   })
 );

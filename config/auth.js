@@ -12,7 +12,9 @@ module.exports = {
   google: {
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
-    callbackURL: "/auth/google/callback"
+    callbackURL: process.env.NODE_ENV === 'production' 
+      ? "https://echolearn-3uy9.onrender.com/auth/google/callback"
+      : "http://localhost:3000/auth/google/callback"
   },
   mongodb: {
     uri: MONGO_URI
