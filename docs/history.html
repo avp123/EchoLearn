@@ -121,7 +121,7 @@
           convos.forEach((conv) => {
             const li = document.createElement("li");
             li.className = "conversation-item";
-            // ElevenLabs’ list endpoint uses "conversation_id" in the response
+            // ElevenLabs' list endpoint uses "conversation_id" in the response
             li.dataset.convoId = conv.conversation_id;
 
             // Extract and format the start time (in Unix seconds)
@@ -143,7 +143,7 @@
       }
 
       // ——————————————————————————————————–
-      // 2. FETCH & DISPLAY ONE CONVERSATION’S TRANSCRIPT
+      // 2. FETCH & DISPLAY ONE CONVERSATION'S TRANSCRIPT
       // ——————————————————————————————————–
       async function showTranscript(convoId) {
         // Hide the list, show transcript container
@@ -161,7 +161,7 @@
           }
           const data = await resp.json();
 
-          const transcript = data.body?.transcript;
+          const transcript = data;
 
           if (!Array.isArray(transcript) || transcript.length === 0) {
             contentDiv.innerHTML = "<p>No transcript available.</p>";
@@ -186,7 +186,7 @@
 
 
       // ——————————————————————
-      // 3. “Back to All Conversations” Button
+      // 3. "Back to All Conversations" Button
       // ——————————————————————
       document.getElementById("backToList").addEventListener("click", () => {
         document.getElementById("transcriptSection").style.display = "none";
