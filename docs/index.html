@@ -157,6 +157,31 @@
       if (widget) {
         widget.setAttribute('user-id', user.googleId);
         widget.setAttribute('user-name', user.name);
+        
+        // Listen for conversation start
+        widget.addEventListener('conversationStarted', async (event) => {
+          try {
+            console.log('Conversation started:', event.detail);
+            const response = await fetch(`${BACKEND_BASE_URL}/api/conversations`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              credentials: 'include',
+              body: JSON.stringify({
+                conversationId: event.detail.conversationId
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error('Failed to save conversation');
+            }
+            
+            console.log('Conversation saved successfully');
+          } catch (err) {
+            console.error('Error saving conversation:', err);
+          }
+        });
       }
     }
 

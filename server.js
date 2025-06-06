@@ -64,6 +64,9 @@ app.use(cors({
   optionsSuccessStatus: 200
 }));
 
+// Add body parsing middleware
+app.use(express.json());
+
 // Passport configuration
 passport.use(new GoogleStrategy(config.google,
   async (accessToken, refreshToken, profile, done) => {
@@ -146,6 +149,7 @@ app.get('/auth/user', (req, res) => {
 // Protected API routes
 app.get('/api/conversations', isAuthenticated, async (req, res) => {
   try {
+    console.log('Fetching conversations for user:', req.user.googleId);
     const response = await fetch(`${API_BASE_URL}/conversations`, {
       method: 'GET',
       headers: {
@@ -160,14 +164,16 @@ app.get('/api/conversations', isAuthenticated, async (req, res) => {
     }
 
     const data = await response.json();
-    // Filter conversations for the current user
-    const userConversations = req.user.conversations || [];
-    const userConversationIds = new Set(userConversations.map(c => c.conversationId));
+    // Get user's conversations from MongoDB
+    const user = await User.findById(req.user._id);
+    const userConversationIds = new Set(user.conversations.map(c => c.conversationId));
     
+    // Filter conversations to only include those saved for this user
     const filteredConversations = data.conversations.filter(conv => 
       userConversationIds.has(conv.conversation_id)
     );
     
+    console.log(`Found ${filteredConversations.length} conversations for user ${req.user.googleId}`);
     return res.json(filteredConversations || []);
   } catch (err) {
     console.error("Server error (list):", err);
@@ -175,22 +181,32 @@ app.get('/api/conversations', isAuthenticated, async (req, res) => {
   }
 });
 
-// Endpoint to save a new conversation
+// Save a new conversation
 app.post('/api/conversations', isAuthenticated, async (req, res) => {
   try {
     const { conversationId } = req.body;
+    console.log('Saving new conversation:', conversationId, 'for user:', req.user.googleId);
     
+    if (!conversationId) {
+      return res.status(400).json({ error: 'Conversation ID is required' });
+    }
+
     // Add conversation to user's list
-    await User.findByIdAndUpdate(req.user.id, {
-      $addToSet: {
-        conversations: {
-          conversationId,
-          startTime: new Date()
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $addToSet: {
+          conversations: {
+            conversationId,
+            startTime: new Date()
+          }
         }
-      }
-    });
-    
-    res.json({ success: true });
+      },
+      { new: true }
+    );
+
+    console.log('Conversation saved successfully');
+    res.json({ success: true, conversationCount: user.conversations.length });
   } catch (err) {
     console.error("Error saving conversation:", err);
     res.status(500).json({ error: "Failed to save conversation" });
@@ -199,14 +215,16 @@ app.post('/api/conversations', isAuthenticated, async (req, res) => {
 
 app.get('/api/conversations/:id', isAuthenticated, async (req, res) => {
   const convoId = req.params.id;
+  console.log('Fetching transcript for conversation:', convoId);
   
-  // Check if user has access to this conversation
-  const userConversations = req.user.conversations || [];
-  if (!userConversations.some(c => c.conversationId === convoId)) {
-    return res.status(403).json({ error: "Unauthorized access to this conversation" });
-  }
-
   try {
+    // Verify user has access to this conversation
+    const user = await User.findById(req.user._id);
+    if (!user.conversations.some(c => c.conversationId === convoId)) {
+      console.log('Unauthorized access attempt to conversation:', convoId);
+      return res.status(403).json({ error: "Unauthorized access to this conversation" });
+    }
+
     const response = await fetch(`${API_BASE_URL}/conversations/${convoId}`, {
       method: 'GET',
       headers: {
@@ -221,7 +239,7 @@ app.get('/api/conversations/:id', isAuthenticated, async (req, res) => {
     }
 
     const data = await response.json();
-    console.log("ElevenLabs transcript response:", data);
+    console.log("ElevenLabs transcript response received");
     const transcript = data.transcript || [];
     return res.json(transcript);
   } catch (err) {
