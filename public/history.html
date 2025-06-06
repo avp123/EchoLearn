@@ -115,7 +115,6 @@
           convos.forEach((conv) => {
             const li = document.createElement("li");
             li.className = "conversation-item";
-            // ElevenLabs uses "conversation_id" in the list response
             li.dataset.convoId = conv.conversation_id;
 
             // Extract and format the start time (in Unix seconds)
