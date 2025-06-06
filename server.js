@@ -10,6 +10,7 @@ const MongoStore = require('connect-mongo');
 const mongoose = require('mongoose');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const config = require('./config/auth');
+const User = require('./models/User');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,12 +56,17 @@ app.use(passport.session());
 passport.use(new GoogleStrategy(config.google,
   async (accessToken, refreshToken, profile, done) => {
     try {
-      // Here you would typically find or create a user in your database
-      const user = {
-        googleId: profile.id,
-        email: profile.emails[0].value,
-        name: profile.displayName
-      };
+      // Find or create user
+      let user = await User.findOne({ googleId: profile.id });
+      
+      if (!user) {
+        user = await User.create({
+          googleId: profile.id,
+          email: profile.emails[0].value,
+          name: profile.displayName
+        });
+      }
+      
       return done(null, user);
     } catch (err) {
       return done(err, null);
@@ -69,11 +75,16 @@ passport.use(new GoogleStrategy(config.google,
 ));
 
 passport.serializeUser((user, done) => {
-  done(null, user);
+  done(null, user.id);
 });
 
-passport.deserializeUser((user, done) => {
-  done(null, user);
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
 });
 
 // Auth middleware to protect routes
@@ -106,7 +117,14 @@ app.get('/auth/logout', (req, res) => {
 });
 
 app.get('/auth/user', (req, res) => {
-  res.json(req.user || null);
+  if (!req.user) {
+    return res.status(401).json(null);
+  }
+  res.json({
+    googleId: req.user.googleId,
+    name: req.user.name,
+    email: req.user.email
+  });
 });
 
 // Protected API routes
@@ -126,17 +144,52 @@ app.get('/api/conversations', isAuthenticated, async (req, res) => {
     }
 
     const data = await response.json();
-    // Filter conversations for the current user (you'll need to implement this based on your data structure)
-    const userConversations = data.conversations.filter(conv => conv.user_id === req.user.googleId);
-    return res.json(userConversations || []);
+    // Filter conversations for the current user
+    const userConversations = req.user.conversations || [];
+    const userConversationIds = new Set(userConversations.map(c => c.conversationId));
+    
+    const filteredConversations = data.conversations.filter(conv => 
+      userConversationIds.has(conv.conversation_id)
+    );
+    
+    return res.json(filteredConversations || []);
   } catch (err) {
     console.error("Server error (list):", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });
 
+// Endpoint to save a new conversation
+app.post('/api/conversations', isAuthenticated, async (req, res) => {
+  try {
+    const { conversationId } = req.body;
+    
+    // Add conversation to user's list
+    await User.findByIdAndUpdate(req.user.id, {
+      $addToSet: {
+        conversations: {
+          conversationId,
+          startTime: new Date()
+        }
+      }
+    });
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error saving conversation:", err);
+    res.status(500).json({ error: "Failed to save conversation" });
+  }
+});
+
 app.get('/api/conversations/:id', isAuthenticated, async (req, res) => {
   const convoId = req.params.id;
+  
+  // Check if user has access to this conversation
+  const userConversations = req.user.conversations || [];
+  if (!userConversations.some(c => c.conversationId === convoId)) {
+    return res.status(403).json({ error: "Unauthorized access to this conversation" });
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/conversations/${convoId}`, {
       method: 'GET',
@@ -152,11 +205,6 @@ app.get('/api/conversations/:id', isAuthenticated, async (req, res) => {
     }
 
     const data = await response.json();
-    // Verify this conversation belongs to the current user
-    if (data.user_id !== req.user.googleId) {
-      return res.status(403).json({ error: "Unauthorized access to this conversation" });
-    }
-
     console.log("ElevenLabs transcript response:", data);
     const transcript = data.transcript || [];
     return res.json(transcript);

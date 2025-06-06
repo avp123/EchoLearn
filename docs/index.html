@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My AI Agent Page</title>
+  <title>EchoLearn</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -16,6 +16,7 @@
     }
     .agent-container {
       margin-top: 40px;
+      display: none; /* Hidden by default until authenticated */
     }
     .view-history {
       margin-top: 2rem;
@@ -25,23 +26,142 @@
       color: #007bff;
       font-size: 1rem;
     }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .logout-btn {
+      padding: 8px 16px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .logout-btn:hover {
+      background: #c82333;
+    }
+    .login-prompt {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin: 2rem auto;
+      max-width: 400px;
+    }
+    .google-btn {
+      background: #4285f4;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      margin-top: 1rem;
+    }
+    .google-btn:hover {
+      background: #357ae8;
+    }
   </style>
 </head>
 <body>
-
-  <h1>Welcome to EchoLearn</h1>
-  <p>Talk to the AI assistant below!</p>
-
-  <div class="agent-container">
-    <!-- The agent-id stays here; it’s not secret. -->
-    <elevenlabs-convai agent-id="agent_01jw5b0p72fqnas385dadb1b9q"></elevenlabs-convai>
+  <div class="header">
+    <h1>Welcome to EchoLearn</h1>
+    <div id="userMenu" class="user-menu" style="display: none;">
+      <div class="user-info">
+        <span id="userName">Loading...</span>
+      </div>
+      <a href="/auth/logout" class="logout-btn">Logout</a>
+    </div>
   </div>
 
-  <div class="view-history">
-    <a href="history.html">📚 View Past Conversations</a>
+  <div id="loginPrompt" class="login-prompt">
+    <h2>Sign in to Start Learning</h2>
+    <p>Please sign in with your Google account to use EchoLearn</p>
+    <a href="/auth/google" class="google-btn">
+      <img src="https://www.google.com/favicon.ico" alt="Google" width="20" height="20">
+      Sign in with Google
+    </a>
+  </div>
+
+  <div id="appContent" style="display: none;">
+    <p>Talk to the AI assistant below!</p>
+
+    <div class="agent-container">
+      <elevenlabs-convai agent-id="agent_01jw5b0p72fqnas385dadb1b9q"></elevenlabs-convai>
+    </div>
+
+    <div class="view-history">
+      <a href="history.html">📚 View Past Conversations</a>
+    </div>
   </div>
 
   <!-- Load the ElevenLabs Convai widget script -->
   <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
+
+  <script>
+    const BACKEND_BASE_URL = "https://echolearn-3uy9.onrender.com";
+
+    // Check authentication status
+    async function checkAuth() {
+      try {
+        const response = await fetch(`${BACKEND_BASE_URL}/auth/user`, {
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          throw new Error('Not authenticated');
+        }
+        const user = await response.json();
+        if (!user) {
+          showLoginPrompt();
+          return;
+        }
+        showApp(user);
+      } catch (err) {
+        showLoginPrompt();
+      }
+    }
+
+    function showLoginPrompt() {
+      document.getElementById('loginPrompt').style.display = 'block';
+      document.getElementById('appContent').style.display = 'none';
+      document.getElementById('userMenu').style.display = 'none';
+    }
+
+    function showApp(user) {
+      document.getElementById('loginPrompt').style.display = 'none';
+      document.getElementById('appContent').style.display = 'block';
+      document.getElementById('userMenu').style.display = 'flex';
+      document.getElementById('userName').textContent = `👤 ${user.name}`;
+      document.querySelector('.agent-container').style.display = 'block';
+
+      // Initialize the ElevenLabs widget with user context
+      const widget = document.querySelector('elevenlabs-convai');
+      if (widget) {
+        widget.setAttribute('user-id', user.googleId);
+        widget.setAttribute('user-name', user.name);
+      }
+    }
+
+    // Initialize when page loads
+    window.addEventListener('DOMContentLoaded', checkAuth);
+  </script>
 </body>
 </html>
