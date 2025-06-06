@@ -99,7 +99,8 @@
         listEl.innerHTML = "<li>Loading conversations…</li>";
 
         try {
-          const resp = await fetch("/api/conversations");
+          const resp = await fetch("https://my-render-app.onrender.com/api/conversations")
+          ;
           if (!resp.ok) {
             throw new Error(`HTTP ${resp.status}`);
           }
