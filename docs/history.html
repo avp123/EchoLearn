@@ -82,6 +82,18 @@
       text-decoration: none;
       cursor: pointer;
     }
+    .refresh-btn {
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .refresh-btn:hover {
+      background: #45a049;
+    }
   </style>
 </head>
 <body>
@@ -93,6 +105,7 @@
       <div class="user-info">
         <span id="userName">Loading...</span>
       </div>
+      <button onclick="loadConversationList()" class="refresh-btn">🔄 Refresh</button>
       <a href="/auth/logout" class="logout-btn">Logout</a>
     </div>
   </div>
@@ -158,6 +171,7 @@
         listEl.innerHTML = "<li>Loading conversations…</li>";
 
         try {
+          console.log('Fetching conversations from server...');
           const resp = await fetch(`${BACKEND_BASE_URL}/api/conversations`, {
             credentials: 'include'
           });
@@ -165,13 +179,17 @@
             throw new Error(`HTTP ${resp.status}`);
           }
           const convos = await resp.json();
+          console.log('Received conversations:', convos);
 
           if (!Array.isArray(convos) || convos.length === 0) {
-            listEl.innerHTML = "<li>No conversations found.</li>";
+            listEl.innerHTML = "<li>No conversations found. Start a new conversation on the home page!</li>";
             return;
           }
 
           listEl.innerHTML = "";
+          // Sort conversations by start time, most recent first
+          convos.sort((a, b) => b.start_time_unix_secs - a.start_time_unix_secs);
+          
           convos.forEach((conv) => {
             const li = document.createElement("li");
             li.className = "conversation-item";
@@ -187,8 +205,9 @@
             li.addEventListener("click", () => showTranscript(li.dataset.convoId));
             listEl.appendChild(li);
           });
+          console.log('Conversations loaded and displayed');
         } catch (err) {
-          console.error(err);
+          console.error("Error loading conversations:", err);
           showError("Failed to fetch conversation list. Check console for details.");
         }
       }
