@@ -30,31 +30,39 @@ if (!ELEVENLABS_API_KEY) {
 // Base URL for the Convai endpoints
 const API_BASE_URL = "https://api.elevenlabs.io/v1/convai";
 
-// Enable CORS with credentials
-app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
 // Session configuration
 app.use(session({
   secret: config.session.secret,
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: config.mongodb.uri }),
+  store: MongoStore.create({ 
+    mongoUrl: config.mongodb.uri,
+    touchAfter: 24 * 3600 // time period in seconds
+  }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-    domain: process.env.NODE_ENV === 'production' ? '.onrender.com' : undefined
-  }
+    sameSite: 'none',
+    domain: process.env.NODE_ENV === 'production' ? 'echolearn-3uy9.onrender.com' : undefined
+  },
+  proxy: true
 }));
 
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Trust proxy - needed for secure cookies on Render
+app.set('trust proxy', 1);
+
+// Enable CORS with credentials
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
+}));
 
 // Passport configuration
 passport.use(new GoogleStrategy(config.google,
@@ -103,24 +111,28 @@ const isAuthenticated = (req, res, next) => {
 app.use(express.static(path.join(__dirname, 'docs')));
 
 // Auth routes
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+app.get('/auth/google', (req, res, next) => {
+  console.log('Attempting Google authentication...');
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
 
-app.get('/auth/google/callback',
+app.get('/auth/google/callback', (req, res, next) => {
+  console.log('Received Google callback...');
   passport.authenticate('google', {
     successRedirect: process.env.CLIENT_URL || 'http://localhost:3000',
     failureRedirect: '/login'
-  })
-);
+  })(req, res, next);
+});
 
 app.get('/auth/logout', (req, res) => {
+  console.log('Logging out user...');
   req.logout(() => {
     res.redirect('/');
   });
 });
 
 app.get('/auth/user', (req, res) => {
+  console.log('Checking user authentication:', req.user ? 'Authenticated' : 'Not authenticated');
   if (!req.user) {
     return res.status(401).json(null);
   }
