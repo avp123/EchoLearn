@@ -1,47 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My AI Agent Page</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 50px;
-      background-color: #f4f4f4;
-    }
-    h1 {
-      color: #333;
-    }
-    .agent-container {
-      margin-top: 40px;
-    }
-    .view-history {
-      margin-top: 2rem;
-    }
-    .view-history a {
-      text-decoration: none;
-      color: #007bff;
-      font-size: 1rem;
-    }
-  </style>
+  <meta charset="UTF-8">
+  <title>EchoLearn</title>
 </head>
 <body>
-
   <h1>Welcome to EchoLearn</h1>
-  <p>Talk to the AI assistant below!</p>
+  <elevenlabs-convai agent-id="agent_01jw5b0p72fqnas385dadb1b9q"></elevenlabs-convai>
+  <p><a href="history.html">View Past Conversations</a></p>
 
-  <div class="agent-container">
-    <!-- The agent-id stays here; it’s not secret. -->
-    <elevenlabs-convai agent-id="agent_01jw5b0p72fqnas385dadb1b9q"></elevenlabs-convai>
-  </div>
-
-  <div class="view-history">
-    <a href="history.html">📚 View Past Conversations</a>
-  </div>
-
-  <!-- Load the ElevenLabs Convai widget script -->
   <script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>
 </body>
 </html>
