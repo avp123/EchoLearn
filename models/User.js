@@ -17,7 +17,8 @@ const userSchema = new mongoose.Schema({
   },
   conversations: [{
     conversationId: String,
-    startTime: Date
+    startTime: Date,
+    endTime: Date
   }],
   createdAt: {
     type: Date,

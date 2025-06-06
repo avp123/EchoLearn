@@ -158,65 +158,62 @@
         widget.setAttribute('user-id', user.googleId);
         widget.setAttribute('user-name', user.name);
         
-        // Listen for conversation start
-        widget.addEventListener('conversationStarted', async (event) => {
-          try {
-            console.log('Conversation started:', event.detail);
-            const response = await fetch(`${BACKEND_BASE_URL}/api/conversations`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              credentials: 'include',
-              body: JSON.stringify({
-                conversationId: event.detail.conversationId
-              })
-            });
-            
-            if (!response.ok) {
-              throw new Error('Failed to save conversation');
-            }
-            
-            console.log('Conversation saved successfully');
-            // Notify the user that the conversation was saved
-            const notification = document.createElement('div');
-            notification.style.position = 'fixed';
-            notification.style.top = '20px';
-            notification.style.right = '20px';
-            notification.style.padding = '10px 20px';
-            notification.style.backgroundColor = '#4CAF50';
-            notification.style.color = 'white';
-            notification.style.borderRadius = '4px';
-            notification.style.zIndex = '1000';
-            notification.textContent = '✅ Conversation saved!';
-            document.body.appendChild(notification);
-            
-            // Remove the notification after 3 seconds
-            setTimeout(() => {
-              notification.remove();
-            }, 3000);
-          } catch (err) {
-            console.error('Error saving conversation:', err);
-            // Show error notification
-            const errorNotification = document.createElement('div');
-            errorNotification.style.position = 'fixed';
-            errorNotification.style.top = '20px';
-            errorNotification.style.right = '20px';
-            errorNotification.style.padding = '10px 20px';
-            errorNotification.style.backgroundColor = '#dc3545';
-            errorNotification.style.color = 'white';
-            errorNotification.style.borderRadius = '4px';
-            errorNotification.style.zIndex = '1000';
-            errorNotification.textContent = '❌ Failed to save conversation';
-            document.body.appendChild(errorNotification);
-            
-            // Remove the error notification after 3 seconds
-            setTimeout(() => {
-              errorNotification.remove();
-            }, 3000);
-          }
-        });
+        // Listen for conversation events
+        widget.addEventListener('conversationStarted', handleConversationEvent);
+        widget.addEventListener('conversationEnded', handleConversationEvent);
       }
+    }
+
+    // Handle conversation events (start and end)
+    async function handleConversationEvent(event) {
+      try {
+        console.log('Conversation event:', event.type, event.detail);
+        const conversationId = event.detail.conversationId;
+        
+        // Save the conversation
+        const response = await fetch(`${BACKEND_BASE_URL}/api/conversations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            conversationId,
+            eventType: event.type
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to save conversation');
+        }
+        
+        console.log('Conversation event saved successfully');
+        // Show success notification
+        showNotification('✅ Conversation saved!', 'success');
+      } catch (err) {
+        console.error('Error saving conversation:', err);
+        showNotification('❌ Failed to save conversation', 'error');
+      }
+    }
+
+    // Helper function to show notifications
+    function showNotification(message, type) {
+      const notification = document.createElement('div');
+      notification.style.position = 'fixed';
+      notification.style.top = '20px';
+      notification.style.right = '20px';
+      notification.style.padding = '10px 20px';
+      notification.style.backgroundColor = type === 'success' ? '#4CAF50' : '#dc3545';
+      notification.style.color = 'white';
+      notification.style.borderRadius = '4px';
+      notification.style.zIndex = '1000';
+      notification.textContent = message;
+      document.body.appendChild(notification);
+      
+      // Remove the notification after 3 seconds
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
     }
 
     // Add this new function

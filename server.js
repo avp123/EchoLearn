@@ -184,29 +184,52 @@ app.get('/api/conversations', isAuthenticated, async (req, res) => {
 // Save a new conversation
 app.post('/api/conversations', isAuthenticated, async (req, res) => {
   try {
-    const { conversationId } = req.body;
-    console.log('Saving new conversation:', conversationId, 'for user:', req.user.googleId);
+    const { conversationId, eventType } = req.body;
+    console.log(`${eventType} event for conversation:`, conversationId, 'user:', req.user.googleId);
     
     if (!conversationId) {
       return res.status(400).json({ error: 'Conversation ID is required' });
     }
 
-    // Add conversation to user's list
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      {
-        $addToSet: {
-          conversations: {
-            conversationId,
-            startTime: new Date()
+    // For conversation start events
+    if (eventType === 'conversationStarted') {
+      // Add conversation to user's list if it doesn't exist
+      const user = await User.findByIdAndUpdate(
+        req.user._id,
+        {
+          $addToSet: {
+            conversations: {
+              conversationId,
+              startTime: new Date()
+            }
           }
-        }
-      },
-      { new: true }
-    );
-
-    console.log('Conversation saved successfully');
-    res.json({ success: true, conversationCount: user.conversations.length });
+        },
+        { new: true }
+      );
+      console.log('Conversation started and saved successfully');
+      res.json({ success: true, conversationCount: user.conversations.length });
+    } 
+    // For conversation end events
+    else if (eventType === 'conversationEnded') {
+      // Update the conversation with end time if it exists
+      const user = await User.findOneAndUpdate(
+        { 
+          _id: req.user._id,
+          'conversations.conversationId': conversationId
+        },
+        {
+          $set: {
+            'conversations.$.endTime': new Date()
+          }
+        },
+        { new: true }
+      );
+      console.log('Conversation ended and updated successfully');
+      res.json({ success: true, conversationCount: user.conversations.length });
+    }
+    else {
+      res.json({ success: true });
+    }
   } catch (err) {
     console.error("Error saving conversation:", err);
     res.status(500).json({ error: "Failed to save conversation" });

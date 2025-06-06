@@ -195,11 +195,14 @@
             li.className = "conversation-item";
             li.dataset.convoId = conv.conversation_id;
 
-            const timestampSecs = conv.start_time_unix_secs;
-            const dateStr = formatUnixSecs(timestampSecs);
+            const startTime = formatUnixSecs(conv.start_time_unix_secs);
+            const endTime = conv.end_time_unix_secs ? formatUnixSecs(conv.end_time_unix_secs) : 'In Progress';
 
             li.innerHTML = `
-              <div class="conv-meta">🗓 ${dateStr}</div>
+              <div class="conv-meta">
+                🕒 Started: ${startTime}<br>
+                ⏱ Ended: ${endTime}
+              </div>
               <div><strong>Conversation ID:</strong> ${li.dataset.convoId}</div>
             `;
             li.addEventListener("click", () => showTranscript(li.dataset.convoId));
